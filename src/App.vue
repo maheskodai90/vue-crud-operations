@@ -1,17 +1,36 @@
 <template>
   <div id="app">
-    <img alt="Vue logo" src="./assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
+    <div class="container">
+      <img alt="Vue logo" src="./assets/logo.png">
+      <RegisterForm :currentItem="currentItem" @refreshList="refreshList" />
+      <ListDatas @currentData = "currentData" :ListRefresh="ListRefresh" />
+    </div>
   </div>
 </template>
 
 <script>
-import HelloWorld from './components/HelloWorld.vue'
+import RegisterForm from './components/RegisterForm.vue'
+import ListDatas from './components/ListDatas.vue'
 
 export default {
   name: 'app',
   components: {
-    HelloWorld
+    RegisterForm,
+    ListDatas
+  },
+  data(){
+    return{
+      currentItem : {},
+      ListRefresh: false
+    }
+  },
+  methods:{
+    currentData(data){
+      this.currentItem = data
+    },
+    refreshList(){
+      this.ListRefresh = true
+    }
   }
 }
 </script>
