@@ -13,7 +13,7 @@
                       </div>
                   </div>
                   <div class="col-md-8 py-5 border">
-                      <h4 class="pb-4">Please fill with your details</h4>
+                      <h4 class="pb-4">{{msg | toUppercase}}</h4>
                       <form>
                           <div class="form-row">
                               <div class="form-group col-md-6">
@@ -118,6 +118,62 @@
                                 </div>
                               </div>
                           </div>
+
+                          <div class="form-row">
+                              <div class="form-group">
+                                  <div class="row" v-for="(action,index) in user.actions">
+                                      <div class="col-sm-3">
+                                        <input 
+                                          type="text" 
+                                          placeholder="Name"
+                                          class="form-control"
+                                          v-model="action.name">
+                                      </div>
+                                      <div class="col-sm-4">
+                                           <VueCtkDateTimePicker v-model="action.due_date" />
+                                      </div>
+                                      <div class="col-sm-4">
+                                        <textarea 
+                                          placeholder="Description"
+                                          v-model="action.description"
+                                          class="form-control"> 
+                                        </textarea>
+                                      </div>
+                                      <div class="col-sm-1">
+                                        <button type="button" class="btn btn-danger btn-sm" @click="delRow(action,index)">&times;</button>
+                                      </div>
+                                  </div>                          
+                                </div>
+                          </div>   
+
+                          <div class="form-row">
+                              <button type="button" class="btn btn-danger btn-sm" @click="addAction()">Add Row</button>
+                          </div><br/> <br/>   
+
+                          <div class="form-row">
+                              <div class="form-group">
+                                <div class="label">Profile Image</div>
+                                <input 
+                                type="file"
+                                @input="singleIconChange"
+                                data-vv-as="image|size:10000" 
+                                ref ="formnew"
+                                accept="image/*" 
+                                >
+                              </div>
+                              <div class="form-group">
+                                <ul v-if="user.picture !=''">
+                                  <li class="dataimg" > 
+                                    <img 
+                                      :src="`http://192.168.1.40:8000`+ user.picture.url" 
+                                      :width="50" 
+                                      :height="50"/> 
+                                      <span @click="removeAttachment">&times;</span>
+                                  </li>
+                                </ul> 
+                              </div>
+                          </div><br/> 
+
                           <div class="form-row">
                               <div class="form-group">
                                   <div class="form-group">
@@ -158,10 +214,16 @@
 </template>
 
 <script>
+
+import VueCtkDateTimePicker from 'vue-ctk-date-time-picker';
+import 'vue-ctk-date-time-picker/dist/vue-ctk-date-time-picker.css';  
+
 export default {
   props: ['currentItem'],
+  components: {VueCtkDateTimePicker},
   data(){
     return{
+      msg:'Please fill with your details',
       user : {
         fullname: '',
         email: '',
@@ -169,13 +231,15 @@ export default {
         chooseoption:'',
         comments: '',
         aggreeterms: '',
-        images:[]
+        picture:'',
+        images:[],
+        actions:[]
     },
     users : [],
     submitButton: true,
     image_alert:'',
     files: [],
-    imgs_urls: []
+    imgs_urls: [],
     }
   },
   watch:{
@@ -199,7 +263,13 @@ export default {
             this.imgs_urls.push(image.url)
           }
       })
-    },
+    }
+
+  },
+  filters:{
+    toUppercase(value){
+      return value.toUpperCase()
+    }
   },
   methods:{
     fileUrl(file){
@@ -209,12 +279,14 @@ export default {
     submitForm(){
       this.$validator.validateAll().then(result => {
       if (result) {
+        this.appendActions()
         this.$http.post('', this.user)
         .then(response => {
           console.log(response);
           this.$emit('refreshList')
           this.formReset()
           this.appendImages(response.body.id)
+          this.appSingleimg(response.body.id)
           this.$notify({
             group: 'foo',
             title: 'Important message',
@@ -231,12 +303,14 @@ export default {
     updateForm(){
       this.$validator.validateAll().then(result => {
       if (result) {
+        this.appendActions()
         this.$http.patch(`${this.user.id}`, this.user)
         .then(response => {
           console.log(response);
           this.$emit('refreshList')
           this.formReset()
           this.appendImages(response.body.id)
+          this.appSingleimg(response.body.id)
           this.$notify({
             group: 'foo',
             title: 'Important message',
@@ -248,7 +322,30 @@ export default {
         })
         }
     })
-    },    
+    },   
+    appendActions(){
+      this.user["actions_attributes"] = this.user.actions
+    },
+    addAction(userid){
+      this.user.actions.push({
+        name:'',
+        due_date:'',
+        _destory: false,
+        description: ''
+      });
+    },
+    delRow(action,index){
+      if(action.id == undefined){
+        this.user.actions.splice(index, 1)
+      }
+      else{
+        let data = this.user.actions.find(actid => actid.id == action.id)
+        alert("Are you sure you want to delete?");
+        if(data) data._destroy = true
+        this.updateForm()
+      }
+      
+    },
     formReset(){
       this.user.fullname=''
       this.user.email=''
@@ -258,19 +355,42 @@ export default {
       this.user.aggreeterms= ''
       this.user.images =[]
       this.imgs_urls = []
+      this.user.actions = []
       this.$nextTick(() => this.$validator.reset())
     },
-    // appendData(){
-    //   this.user['fullname'] = this.user.fullname
-    //   this.user['email'] = this.user.email
-    //   this.user['mobileno'] = this.user.mobileno
-    //   this.user['chooseoption'] = this.user.chooseoption
-    //   this.user['comments'] = this.user.comments
-    //   this.user['aggreeterms'] = this.user.aggreeterms
-    // },
+    singleIconChange(){
+      let input = this.$refs.formnew
+      let files = input.files
+       if(files[0].size > 1e+7){
+        this.image_alert = "Image size should be 10 MB or lesser"
+       }
+       else{
+        this.image_alert = " "
+        this.user.picture = files[0]
+       }
+      input.type = 'text'
+      input.type = 'file'
+    },
+    appSingleimg(userid){
+      let formData = new FormData()
+      let picture = formData.append("user[picture]", this.user.picture)
+      if(picture !=''){
+        this.$http.patch(`${userid}`, formData)
+        .then(res => {
+          setTimeout(() =>{
+            this.$emit('refreshList')
+          },600)
+        })
+      }
+      else{
+        this.$emit('refreshList')
+      }
+
+    },
     IconChange() {
       let input = this.$refs.form
       let files = input.files
+      console.log(files)
       for(let i= 0; i < files.length; i++){
         if(files[i].size > 1e+7){
           this.image_alert = "Image size should be 10 MB or lesser"
@@ -317,5 +437,5 @@ export default {
 .form-group ul{ clear: both;width: 100%; margin:20px 0 0;padding:0;float: left;}
 .form-group ul li{list-style: none;float: left; border: 1px solid #ddd;margin: 5px;position: relative; }
 .dataimg span{position: absolute;background: red;width: 20px;height: 20px;text-align: center;right: 0;font-size: 17px;line-height: 20px}
-
+.form-group .label{text-align: left;clear: both;display: block;}
 </style>
