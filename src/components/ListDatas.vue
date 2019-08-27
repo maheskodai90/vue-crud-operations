@@ -2,6 +2,14 @@
   <div class="hello">
       <section class="testimonial py-5" id="testimonial">
           <div class="container">
+            <div class="row">
+              <div class="col-sm-6"></div>
+              <div class="col-sm-6">
+                <div class="form-group">
+                   <input type="text" class="form-control" placeholder="Search">
+                </div>
+              </div>
+            </div>
             <table class="table">
               <thead class="thead-dark">
                 <tr>
@@ -39,8 +47,11 @@
 </template>
 
 <script>
+import Swal from 'sweetalert2'
+
 export default {
   props: ['ListRefresh'],
+  components:{ Swal },
   data(){
     return{
       users:[]
@@ -77,16 +88,38 @@ export default {
       this.$emit('currentData', data)
     },
     deleteMethod(data){
-      this.$http.delete(`${data.id}`, data)
-      .then(response => {
-         console.log(response)
-        this.$notify({
-          group: 'foo',
-          type: 'success',
-          title: 'Important message',
-          text: 'One record has deleted'
-        });
+      Swal.fire({
+        title: 'Are you sure?',
+        text: "You won't be able to revert this!",
+        type: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#3085d6',
+        cancelButtonColor: '#d33',
+        confirmButtonText: 'Yes, delete it!'
+      }).then((result) => {
+        if (result.value) {
+          this.$http.delete(`${data.id}`, data)
+          this.ListRefresh = true
+          Swal.fire(
+            'Deleted!',
+            'Your file has been deleted.',
+            'success'
+          )
+        }
       })
+
+      // this.$http.delete(`${data.id}`, data)
+      // .then(response => {
+
+
+      //    console.log(response)
+      //   this.$notify({
+      //     group: 'foo',
+      //     type: 'success',
+      //     title: 'Important message',
+      //     text: 'One record has deleted'
+      //   });
+      // })
     }
   }
 

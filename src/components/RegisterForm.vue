@@ -126,18 +126,28 @@
                                         <input 
                                           type="text" 
                                           placeholder="Name"
+                                          :name="'actionname'+index"
+                                          v-validate="'required'"
                                           class="form-control"
                                           v-model="action.name">
+                                          <small v-show="errors.has('actionname'+index)" class="field-text is-danger">Enter the action name</small>
                                       </div>
                                       <div class="col-sm-4">
-                                           <VueCtkDateTimePicker v-model="action.due_date" />
+                                           <VueCtkDateTimePicker  
+                                           :name="'actionduedate'+index"
+                                           v-validate="'required'"
+                                           v-model="action.due_date" />
+                                           <small v-show="errors.has('actionduedate'+index)" class="field-text is-danger">Enter the due date</small>
                                       </div>
                                       <div class="col-sm-4">
                                         <textarea 
                                           placeholder="Description"
                                           v-model="action.description"
+                                          :name="'actiondesc'+index" 
+                                          v-validate ="{ required: true, min: 10 }" 
                                           class="form-control"> 
                                         </textarea>
+                                        <small v-show="errors.has('actiondesc' + index)" class="field-text is-danger">Enter the action desc</small>
                                       </div>
                                       <div class="col-sm-1">
                                         <button type="button" class="btn btn-danger btn-sm" @click="delRow(action,index)">&times;</button>
@@ -160,15 +170,27 @@
                                 ref ="formnew"
                                 accept="image/*" 
                                 >
+                                <span style="color:red;display: block;clear: both" v-if="image_alert_single">{{image_alert_single}}</span>
                               </div>
-                              <div class="form-group">
-                                <ul v-if="user.picture !=''">
+                              <div class="form-group" v-if="user.picture.attachment_id">
+                                <ul >
                                   <li class="dataimg" > 
                                     <img 
                                       :src="`http://192.168.1.40:8000`+ user.picture.url" 
                                       :width="50" 
                                       :height="50"/> 
-                                      <span @click="removeAttachment">&times;</span>
+                                      <span @click="removeSingleimg">&times;</span>
+                                  </li>
+                                </ul> 
+                              </div>
+                              <div class="form-group" v-else>
+                                <ul >
+                                  <li class="dataimg" v-if="picture_url"> 
+                                    <img 
+                                      :src="picture_url" 
+                                      :width="50" 
+                                      :height="50"/> 
+                                      <span @click="removeSingleimg">&times;</span>
                                   </li>
                                 </ul> 
                               </div>
@@ -238,6 +260,9 @@ export default {
     users : [],
     submitButton: true,
     image_alert:'',
+    picture_url:'',
+    pictureimg:'',
+    image_alert_single:'',
     files: [],
     imgs_urls: [],
     }
@@ -263,6 +288,10 @@ export default {
             this.imgs_urls.push(image.url)
           }
       })
+    },
+    pictureimg(){
+      this.picture_url = ''
+      this.picture_url = URL.createObjectURL(this.pictureimg)
     }
 
   },
@@ -355,18 +384,25 @@ export default {
       this.user.aggreeterms= ''
       this.user.images =[]
       this.imgs_urls = []
+      this.user.picture =''
+      this.pictureimg =''
       this.user.actions = []
+      this.picture_url = ''
       this.$nextTick(() => this.$validator.reset())
     },
     singleIconChange(){
       let input = this.$refs.formnew
       let files = input.files
-       if(files[0].size > 1e+7){
-        this.image_alert = "Image size should be 10 MB or lesser"
+       if(files[0].size > 1e+6){
+
+        this.image_alert_single = "Image size should be 2 MB or lesser"
+        console.log(this.image_alert_single)
        }
        else{
-        this.image_alert = " "
-        this.user.picture = files[0]
+        this.image_alert_single = " "
+        this.user.picture = files[0],
+        this.pictureimg = files[0]
+        
        }
       input.type = 'text'
       input.type = 'file'
@@ -379,11 +415,13 @@ export default {
         .then(res => {
           setTimeout(() =>{
             this.$emit('refreshList')
+            this.user.picture = ''
           },600)
         })
       }
       else{
         this.$emit('refreshList')
+        this.user.picture = ''
       }
 
     },
@@ -423,8 +461,8 @@ export default {
         this.$emit('refreshList')
       }
     },    
-    removeAttachment(){
-      alert()
+    removeSingleimg(){
+      this.picture_url = ''
     }
 },
 
@@ -438,4 +476,5 @@ export default {
 .form-group ul li{list-style: none;float: left; border: 1px solid #ddd;margin: 5px;position: relative; }
 .dataimg span{position: absolute;background: red;width: 20px;height: 20px;text-align: center;right: 0;font-size: 17px;line-height: 20px}
 .form-group .label{text-align: left;clear: both;display: block;}
+small.field-text {clear: both;float: left;width: 100%;text-align: left}
 </style>
